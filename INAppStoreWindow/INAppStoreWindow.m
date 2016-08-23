@@ -203,8 +203,6 @@ NS_INLINE void INApplyClippingPathInCurrentContext(CGPathRef path) {
 
 - (void)drawSeparatorInRect:(NSRect)separatorFrame forEdge:(NSRectEdge)edge
 {
-	NSAssert(edge == NSMinYEdge || edge == NSMaxYEdge, @"edge must be NSMinYEdge or NSMaxYEdge");
-
 	CGFloat multiplier = 0;
 	switch (edge) {
 		case NSMinYEdge:
@@ -213,6 +211,8 @@ NS_INLINE void INApplyClippingPathInCurrentContext(CGPathRef path) {
 		case NSMaxYEdge:
 			multiplier = 1;
 			break;
+        default:
+            NSParameterAssert(edge == NSMinYEdge || edge == NSMaxYEdge);
 	}
 
 	INAppStoreWindow *window = (INAppStoreWindow *)self.window;
