@@ -154,10 +154,26 @@ NS_INLINE void INApplyClippingPathInCurrentContext(CGPathRef path) {
 
 	static dispatch_once_t oncePredicate;
 	dispatch_once(&oncePredicate, ^{
-		NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithData:[[NSData alloc] initWithBase64Encoding:INWindowBackgroundPatternOverlayLayer]];
+		NSBitmapImageRep *rep = nil;
+
+		NSData *layerInBase64 = nil;
+	#if __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_10_9 // initWithBase64EncodedString:options: is available in OS X v10.9 and later
+		layerInBase64 = [[NSData alloc] initWithBase64EncodedString:INWindowBackgroundPatternOverlayLayer options:NSDataBase64DecodingIgnoreUnknownCharacters];
+	#else
+		layerInBase64 = [[NSData alloc] initWithBase64Encoding:INWindowBackgroundPatternOverlayLayer];
+	#endif
+		rep = [[NSBitmapImageRep alloc] initWithData:layerInBase64];
+
 		NSImage *image = [[NSImage alloc] initWithSize:rep.size];
 		[image addRepresentation:rep];
-		[image addRepresentation:[[NSBitmapImageRep alloc] initWithData:[[NSData alloc] initWithBase64Encoding:INWindowBackgroundPatternOverlayLayer2x]]];
+
+		NSData *layer2xInBase64 = nil;
+	#if __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_10_9 // Same as above
+		layer2xInBase64 = [[NSData alloc] initWithBase64EncodedString:INWindowBackgroundPatternOverlayLayer2x options:NSDataBase64DecodingIgnoreUnknownCharacters];
+	#else
+		layer2xInBase64 = [[NSData alloc] initWithBase64Encoding:INWindowBackgroundPatternOverlayLayer2x];
+	#endif
+		[image addRepresentation:[[NSBitmapImageRep alloc] initWithData:layer2xInBase64]];
 
 		noiseColor = [NSColor colorWithPatternImage:image];
 	});
@@ -496,10 +512,17 @@ NS_INLINE void INApplyClippingPathInCurrentContext(CGPathRef path) {
 
 - (void)mouseUp:(NSEvent *)theEvent
 {
-	if (theEvent.clickCount == 2) {
-		// Get settings from "System Preferences" >	 "Appearance" > "Double-click on windows title bar to minimize"
+	if ([theEvent clickCount] == 2) {
 		NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-		BOOL shouldMiniaturize = [[userDefaults objectForKey:@"AppleMiniaturizeOnDoubleClick"] boolValue];
+		
+		// Get settings from "System Preferences" >  "Appearance" > "Double-click on windows title bar to minimize"
+		NSString *const MDAppleMiniaturizeOnDoubleClickKey = @"AppleMiniaturizeOnDoubleClick";
+		BOOL shouldMiniaturize = [[userDefaults objectForKey:MDAppleMiniaturizeOnDoubleClickKey] boolValue];
+		
+		// In El Capitan and later from "System Preferences" >  "Dock" > "Double-click on windows title bar to ..."
+		NSString *const MDAppleMiniaturizeOnDoubleClickKeyElCapitan = @"AppleActionOnDoubleClick";
+		shouldMiniaturize = shouldMiniaturize || [[userDefaults objectForKey:MDAppleMiniaturizeOnDoubleClickKeyElCapitan] isEqualToString:@"Minimize"];
+		
 		if (shouldMiniaturize) {
 			[self.window performMiniaturize:self];
         } else if (INRunningYosemite()) {
